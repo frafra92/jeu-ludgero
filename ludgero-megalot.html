@@ -253,8 +253,31 @@ body{background:var(--dark);min-height:100vh;overflow-x:hidden;font-family:'Nuni
 <script>
 // ===================== AUDIO =====================
 let AC2=null;
-function ac(){if(!AC2){try{AC2=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}return AC2}
-function beep(f,d,v,t='square'){try{const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d)}catch(e){}}
+function ac(){
+  if(!AC2){try{AC2=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(AC2&&AC2.state==='suspended'){try{AC2.resume()}catch(e){}}
+  return AC2;
+}
+function beep(f,d,v,t='square'){
+  try{
+    const a=ac();if(!a)return;
+    if(a.state==='suspended'){a.resume().then(()=>_beep(a,f,d,v,t));return}
+    _beep(a,f,d,v,t);
+  }catch(e){}
+}
+function _beep(a,f,d,v,t){
+  try{
+    const o=a.createOscillator(),g=a.createGain();
+    o.type=t;o.frequency.value=f;
+    g.gain.setValueAtTime(v,a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d);
+    o.connect(g);g.connect(a.destination);
+    o.start();o.stop(a.currentTime+d);
+  }catch(e){}
+}
+// Déverrouille l'audio au premier toucher (iOS/Android)
+document.addEventListener('touchstart',()=>{ac()},{once:true});
+document.addEventListener('click',()=>{ac()},{once:true});
 function sfxOK(){beep(660,0.07,0.25);setTimeout(()=>beep(880,0.07,0.2),70);setTimeout(()=>beep(1100,0.15,0.18),140)}
 function sfxFail(){beep(220,0.12,0.3,'sawtooth');setTimeout(()=>beep(180,0.12,0.28,'sawtooth'),110);setTimeout(()=>beep(150,0.2,0.25,'sawtooth'),240)}
 function sfxBigFail(){
