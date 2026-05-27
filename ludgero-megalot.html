@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Aide Ludgero à Attraper le Mégalot !</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{--orange:#FF6B00;--yellow:#FFD700;--blue:#1A6FFF;--green:#00C853;--red:#FF1744;--dark:#1a1a2e;--white:#fff;--cream:#FFF8E1}
+body{background:var(--dark);min-height:100vh;overflow-x:hidden;font-family:'Nunito',sans-serif}
+#game{min-height:100vh;color:var(--white);width:100%;max-width:480px;margin:0 auto;position:relative}
+.screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px 16px;text-align:center;animation:fadeIn 0.3s ease}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes celebrate{0%{transform:scale(1)}50%{transform:scale(1.25) rotate(6deg)}100%{transform:scale(1)}}
+@keyframes glow{0%,100%{text-shadow:0 0 10px gold}50%{text-shadow:0 0 40px gold,0 0 80px orange}}
+@keyframes confetti-fall{from{transform:translateY(-20px) rotate(0deg);opacity:1}to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+@keyframes pop{0%{transform:scale(0.5);opacity:0}60%{transform:scale(1.3)}100%{transform:scale(1);opacity:1}}
+@keyframes starPop{0%{transform:scale(0) rotate(-30deg);opacity:0}70%{transform:scale(1.4) rotate(10deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes timer-frozen{0%,100%{box-shadow:0 0 0 4px var(--blue)}50%{box-shadow:0 0 0 10px var(--blue)}}
+@keyframes defeatPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+@keyframes moneyRain{from{transform:translateY(-20px) rotate(0deg);opacity:1}to{transform:translateY(110vh) rotate(360deg);opacity:0}}
+
+.logo{font-family:'Press Start 2P',monospace;font-size:12px;color:var(--yellow);text-shadow:3px 3px 0 var(--orange);line-height:2.2;margin-bottom:6px}
+.btn{background:var(--orange);color:var(--white);border:none;border-radius:14px;padding:15px 28px;font-size:16px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif;box-shadow:0 5px 0 #c44800;transition:transform 0.1s,box-shadow 0.1s;width:100%;max-width:300px;margin:6px 0;touch-action:manipulation}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #c44800}
+.btn.green{background:var(--green);box-shadow:0 5px 0 #00952d}.btn.green:active{box-shadow:0 2px 0 #00952d}
+.btn.gray{background:#555;box-shadow:0 5px 0 #333;font-size:13px}
+
+.hud{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(0,0,0,0.92);display:flex;justify-content:space-between;align-items:center;padding:10px 16px;z-index:100;border-bottom:2px solid var(--orange)}
+.hud-timer{font-family:'Press Start 2P',monospace;font-size:22px;color:var(--yellow);min-width:48px;text-align:right}
+.hud-timer.danger{color:var(--red);animation:pulse 0.4s infinite}
+.hud-ep{font-size:10px;color:#aaa;font-family:'Press Start 2P',monospace;margin-bottom:4px}
+
+.ep-title{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--yellow);margin-bottom:10px;line-height:2}
+.progress-bar{width:100%;max-width:340px;height:14px;background:#333;border-radius:7px;overflow:hidden;margin:14px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--orange),var(--yellow));transition:width 0.6s;border-radius:7px}
+.path-container{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;justify-content:center;align-items:center}
+.step-dot{width:38px;height:38px;border-radius:50%;border:3px solid #444;background:#222;display:flex;align-items:center;justify-content:center;font-size:17px;transition:all 0.3s}
+.step-dot.done{background:var(--green);border-color:var(--green)}
+.step-dot.current{background:var(--orange);border-color:var(--yellow);box-shadow:0 0 14px var(--orange)}
+.step-dot.locked{opacity:0.35}
+
+.choices{display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px;margin-top:14px}
+.choice-btn{background:#2a2a4a;border:2px solid #444;color:var(--white);border-radius:12px;padding:14px 12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;text-align:left;transition:all 0.18s;touch-action:manipulation;line-height:1.4}
+.choice-btn:active,.choice-btn:hover{border-color:var(--orange);background:#3a3a5a}
+.choice-btn.correct{background:#003d14;border-color:var(--green);color:#4eff8a}
+.choice-btn.wrong{background:#3d0000;border-color:var(--red);color:#ff6b6b;animation:shake 0.35s}
+
+.result-banner{font-size:26px;font-weight:900;margin:12px 0;padding:10px 24px;border-radius:14px;animation:pop 0.4s ease}
+.result-banner.win{background:var(--green);color:var(--white)}
+.result-banner.lose{background:var(--red);color:var(--white)}
+.stars{font-size:26px;letter-spacing:5px;margin:8px 0}
+.star-anim{display:inline-block;animation:starPop 0.4s ease forwards;opacity:0}
+
+.dialog-box{background:#1a1a3a;border:2px solid var(--orange);border-radius:14px;padding:14px 16px;width:100%;max-width:340px;margin:10px 0}
+.dialog-speaker{font-size:12px;color:var(--orange);font-weight:900;margin-bottom:5px}
+.dialog-text{font-size:14px;line-height:1.6;color:var(--cream)}
+
+.memo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%;max-width:340px;margin:12px auto}
+.memo-card{aspect-ratio:1;border-radius:12px;cursor:pointer;perspective:600px;touch-action:manipulation}
+.memo-card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform 0.35s}
+.memo-card.flipped .memo-card-inner{transform:rotateY(180deg)}
+.memo-front,.memo-back{position:absolute;width:100%;height:100%;backface-visibility:hidden;border-radius:12px;display:flex;align-items:center;justify-content:center;border:2px solid #555}
+.memo-front{background:#2a2a4a}
+.memo-front::after{content:'?';color:#666;font-family:'Press Start 2P',monospace;font-size:16px}
+.memo-back{background:#1a3a4a;border-color:var(--blue);transform:rotateY(180deg);font-size:26px}
+.memo-card.matched .memo-card-inner{transform:rotateY(180deg)}
+.memo-card.matched .memo-back{background:#003d14;border-color:var(--green)}
+.memo-score{font-family:'Press Start 2P',monospace;font-size:18px;color:var(--yellow);margin:8px 0}
+.memo-msg{font-size:13px;color:var(--orange);font-weight:900;min-height:20px;margin:4px 0}
+
+.coffeebar{width:85%;height:26px;background:#333;border-radius:13px;overflow:hidden;margin:12px auto}
+.coffeefill{height:100%;background:linear-gradient(90deg,#6d4c41,#d7ccc8);border-radius:13px;transition:width 0.15s}
+.falling-area{position:relative;height:180px;background:#1a1a3a;border-radius:14px;overflow:hidden;width:100%;max-width:340px;margin:10px auto;border:2px solid #333}
+.falling-obj{position:absolute;font-size:30px;cursor:pointer;user-select:none;touch-action:manipulation;line-height:1}
+.score-big{font-family:'Press Start 2P',monospace;font-size:28px;color:var(--yellow);margin:10px 0}
+
+/* DEFEAT SCREEN */
+#s-lose{background:var(--dark)}
+.defeat-emoji{font-size:90px;animation:defeatPulse 0.6s infinite}
+.defeat-text{font-size:36px;font-weight:900;font-family:'Press Start 2P',monospace;color:var(--red);text-shadow:0 0 20px var(--red);margin:10px 0;line-height:1.4}
+
+/* EP5 */
+.megalot-calc-box{background:#1a1a3a;border:3px solid var(--yellow);border-radius:18px;padding:20px;width:100%;max-width:340px;margin:12px auto}
+.calc-op{font-size:32px;font-weight:900;font-family:'Press Start 2P',monospace;color:var(--white);line-height:1.6;margin-bottom:12px}
+.calc-op span{color:var(--orange)}
+.answer-input{font-family:'Press Start 2P',monospace;font-size:26px;width:100%;text-align:center;background:#111;border:3px solid var(--orange);color:var(--yellow);border-radius:12px;padding:12px;outline:none;letter-spacing:4px}
+.answer-input.correct-input{border-color:var(--green);color:var(--green);animation:pop 0.3s}
+.answer-input.wrong-input{border-color:var(--red);color:var(--red);animation:shake 0.35s}
+.ep5-timer-wrap{display:inline-block;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:52px;color:var(--yellow);margin:8px 0;border-radius:14px;padding:6px 20px;border:3px solid transparent;transition:all 0.2s;user-select:none;touch-action:manipulation}
+.ep5-timer-wrap.danger{color:var(--red);animation:pulse 0.4s infinite}
+.ep5-timer-wrap.frozen{color:var(--blue)!important;border-color:var(--blue)!important;animation:timer-frozen 1s infinite!important}
+.freeze-hint{font-size:11px;color:#333;margin-top:4px;transition:color 0.5s}
+.freeze-hint.visible{color:#555}
+
+.megalot-glow{font-size:80px;animation:glow 1.5s infinite,bounce 1s infinite}
+.money-piece{position:fixed;font-size:24px;animation:moneyRain 3s ease-in forwards;pointer-events:none;z-index:999}
+.confetti-piece{position:fixed;width:10px;height:10px;border-radius:2px;animation:confetti-fall 3s ease-in forwards;pointer-events:none;z-index:998}
+#flash{position:fixed;inset:0;pointer-events:none;z-index:200;opacity:0;transition:opacity 0.1s}
+</style>
+</head>
+<body>
+<div id="flash"></div>
+<div id="game">
+
+<!-- INTRO -->
+<div id="s-intro" class="screen active">
+  <div class="logo">🏗️ AIDE LUDGERO<br>À ATTRAPER LE</div>
+  <div class="logo" style="color:var(--orange);font-size:16px">MÉGALOT !</div>
+  <span style="font-size:70px;animation:bounce 1s infinite;display:block;margin:10px 0">👷</span>
+  <p style="font-size:13px;color:#bbb;max-width:300px;margin-bottom:18px;line-height:1.8">Ludgero est un patron BTP totalement débordé.<br>4 épreuves l'attendent avant la gloire légendaire !</p>
+  <div class="path-container">
+    <div class="step-dot locked">🧠</div><div style="color:#444;font-size:16px">→</div>
+    <div class="step-dot locked">🃏</div><div style="color:#444;font-size:16px">→</div>
+    <div class="step-dot locked">☕</div><div style="color:#444;font-size:16px">→</div>
+    <div class="step-dot locked">📞</div><div style="color:#444;font-size:16px">→</div>
+    <div class="step-dot locked">🏆</div>
+  </div>
+  <button class="btn" onclick="startGame()">▶ JOUER !</button>
+  <p style="font-size:10px;color:#333;margin-top:12px">🔊 Active le son !</p>
+</div>
+
+<!-- EP INTRO -->
+<div id="s-ep-intro" class="screen">
+  <div id="ei-num" class="ep-title"></div>
+  <div id="ei-emoji" style="font-size:70px;margin:10px 0;animation:bounce 0.9s infinite"></div>
+  <div id="ei-title" style="font-family:'Press Start 2P',monospace;font-size:11px;color:var(--yellow);margin-bottom:8px"></div>
+  <div id="ei-desc" style="font-size:16px;font-weight:900;margin-bottom:16px;line-height:1.5;max-width:300px"></div>
+  <div class="progress-bar"><div id="ei-prog" class="progress-fill"></div></div>
+  <p style="font-size:11px;color:var(--orange);font-family:'Press Start 2P',monospace;margin-bottom:14px">PRÊT ?</p>
+  <button class="btn" onclick="launchEpreuve()">C'EST PARTI !</button>
+</div>
+
+<!-- EP1 QCM -->
+<div id="s-ep1" class="screen">
+  <div style="padding-top:70px;width:100%;max-width:360px">
+    <div class="ep-title">ÉPREUVE 1 — QCM DU CHANTIER</div>
+    <div class="dialog-box">
+      <div class="dialog-speaker">🧠 QUESTION :</div>
+      <div class="dialog-text" id="ep1-q"></div>
+    </div>
+    <div class="choices" id="ep1-choices"></div>
+    <p style="font-size:11px;color:#555;margin-top:10px" id="ep1-prog">Question 1/3</p>
+  </div>
+</div>
+
+<!-- EP2 MEMO -->
+<div id="s-ep2" class="screen">
+  <div style="padding-top:70px;width:100%;max-width:360px">
+    <div class="ep-title">ÉPREUVE 2 — MÉMO KEVIN</div>
+    <p style="font-size:14px;font-weight:900;margin-bottom:4px">Trouve les paires ! 🃏</p>
+    <p style="font-size:12px;color:#888;margin-bottom:6px">Retourne 2 cartes — mémorise !</p>
+    <div class="memo-score" id="ep2-score">0 / 4 paires</div>
+    <div class="memo-msg" id="ep2-msg"></div>
+    <div class="memo-grid" id="ep2-grid"></div>
+  </div>
+</div>
+
+<!-- EP3 CAFÉINE -->
+<div id="s-ep3" class="screen">
+  <div style="padding-top:70px;width:100%;max-width:360px">
+    <div class="ep-title">ÉPREUVE 3 — SURVIE CAFÉINE</div>
+    <p style="font-size:15px;font-weight:900;margin-bottom:4px">Attrape les ☕ — évite les 🧾</p>
+    <div class="coffeebar"><div class="coffeefill" id="ep3-bar" style="width:100%"></div></div>
+    <p style="font-size:11px;color:#aaa;margin-bottom:2px">Énergie de Ludgero</p>
+    <div class="score-big" id="ep3-score">0</div>
+    <div class="falling-area" id="ep3-area"></div>
+    <p style="font-size:11px;color:#555;margin-top:6px" id="ep3-status">Attrape 6 cafés pour survivre !</p>
+  </div>
+</div>
+
+<!-- EP4 CLIENT -->
+<div id="s-ep4" class="screen">
+  <div style="padding-top:70px;width:100%;max-width:360px">
+    <div class="ep-title">ÉPREUVE 4 — CLIENT EN PANIQUE</div>
+    <div class="dialog-box">
+      <div class="dialog-speaker">📞 CLIENT :</div>
+      <div class="dialog-text" id="ep4-text"></div>
+    </div>
+    <p style="font-size:14px;color:var(--yellow);margin:8px 0;font-weight:900" id="ep4-q"></p>
+    <div class="choices" id="ep4-choices"></div>
+    <p style="font-size:11px;color:#555;margin-top:8px" id="ep4-prog">Question 1/3</p>
+  </div>
+</div>
+
+<!-- EP5 MÉGALOT -->
+<div id="s-ep5" class="screen">
+  <div style="width:100%;max-width:360px;text-align:center;padding:16px 0">
+    <div class="ep-title" style="color:var(--red);font-size:9px">⚠️ ÉPREUVE FINALE — LE MÉGALOT</div>
+    <p style="font-size:12px;color:#ccc;margin:4px 0;line-height:1.8">Résous le calcul → tape le résultat<br>= code du coffre !</p>
+    <div class="ep5-timer-wrap" id="ep5-timer" onclick="toggleFreeze()">5</div>
+    <div class="freeze-hint" id="freeze-hint">💡 clique sur le timer...</div>
+    <div style="font-size:28px;margin:4px 0">🔐</div>
+    <div class="megalot-calc-box">
+      <div class="calc-op" id="ep5-op"></div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:8px">= CODE DU COFFRE</div>
+      <input class="answer-input" id="ep5-input" type="number" placeholder="????"
+        oninput="checkMegalot(this.value)" autocomplete="off">
+    </div>
+    <p style="font-size:12px;color:#555;margin-top:8px" id="ep5-tries"></p>
+  </div>
+</div>
+
+<!-- WIN EP -->
+<div id="s-win-ep" class="screen">
+  <div id="win-emoji" style="font-size:70px;animation:bounce 0.7s infinite"></div>
+  <div class="result-banner win">ÉPREUVE RÉUSSIE !</div>
+  <div id="win-stars" class="stars"></div>
+  <p id="win-msg" style="font-size:14px;color:#ccc;margin:10px 0;max-width:290px;line-height:1.7"></p>
+  <div class="path-container" id="win-path"></div>
+  <button class="btn green" id="win-next-btn" onclick="nextEpreuve()">SUIVANT ▶</button>
+</div>
+
+<!-- LOSE -->
+<div id="s-lose" class="screen">
+  <div class="defeat-emoji" id="defeat-emoji">😭</div>
+  <div class="defeat-text" id="defeat-title">ÉCHEC !</div>
+  <p id="lose-msg" style="font-size:14px;color:#ccc;margin:14px 0;max-width:290px;line-height:1.7"></p>
+  <button class="btn" onclick="retryEpreuve()">🔄 RÉESSAYER</button>
+  <button class="btn gray" onclick="goHome()">🏠 MENU</button>
+</div>
+
+<!-- VICTORY -->
+<div id="s-victory" class="screen">
+  <div class="megalot-glow">🏆</div>
+  <div class="logo" style="font-size:12px;color:var(--yellow);margin-top:8px;line-height:2.5">MÉGALOT OBTENU !<br><span style="color:var(--green);font-size:14px">1 000 000 € !!!</span></div>
+  <div style="font-size:50px;margin:8px 0;animation:celebrate 0.7s infinite">👷</div>
+  <p style="font-size:13px;color:#FFD700;font-weight:900;margin:6px 0">LUDGERO EST MILLIONNAIRE !</p>
+  <p style="font-size:13px;color:#ccc;max-width:280px;line-height:2;margin-bottom:16px">
+    Les ouvriers hurlent :<br>
+    <span style="color:var(--yellow);font-size:18px;font-weight:900">"PAAATROOOON !!!"</span><br>
+    Kevin pleure 😭💸 Kevin danse 🕺💸
+  </p>
+  <div id="victory-stars" class="stars" style="font-size:30px"></div>
+  <button class="btn" style="margin-top:18px" onclick="goHome()">🔄 REJOUER</button>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hud" style="display:none">
+  <div>
+    <div class="hud-ep" id="hud-ep">ÉP. 1/4</div>
+    <div id="hud-lives" style="font-size:18px;letter-spacing:2px">❤️❤️❤️</div>
+  </div>
+  <div class="hud-timer" id="hud-timer">30</div>
+</div>
+</div>
+
+<script>
+// ===================== AUDIO =====================
+let AC2=null;
+function ac(){if(!AC2){try{AC2=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}return AC2}
+function beep(f,d,v,t='square'){try{const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d)}catch(e){}}
+function sfxOK(){beep(660,0.07,0.25);setTimeout(()=>beep(880,0.07,0.2),70);setTimeout(()=>beep(1100,0.15,0.18),140)}
+function sfxFail(){beep(220,0.12,0.3,'sawtooth');setTimeout(()=>beep(180,0.12,0.28,'sawtooth'),110);setTimeout(()=>beep(150,0.2,0.25,'sawtooth'),240)}
+function sfxBigFail(){
+  // Gros son dramatique d'échec
+  beep(200,0.15,0.4,'sawtooth');setTimeout(()=>beep(160,0.15,0.4,'sawtooth'),130);
+  setTimeout(()=>beep(130,0.15,0.4,'sawtooth'),260);setTimeout(()=>beep(100,0.4,0.4,'sawtooth'),400);
+  setTimeout(()=>beep(80,0.5,0.35,'sawtooth'),700);
+}
+function sfxFlip(){beep(600,0.05,0.1,'sine')}
+function sfxMatch(){beep(784,0.08,0.18);setTimeout(()=>beep(988,0.08,0.18),90);setTimeout(()=>beep(1175,0.18,0.18),180)}
+function sfxFreeze(){beep(440,0.04,0.15,'sine');setTimeout(()=>beep(550,0.04,0.15,'sine'),50);setTimeout(()=>beep(660,0.1,0.15,'sine'),100)}
+function sfxCoffee(){beep(880,0.05,0.18,'sine')}
+function sfxBill(){beep(180,0.1,0.22,'sawtooth')}
+function sfxEpStart(){beep(440,0.05,0.18);setTimeout(()=>beep(554,0.05,0.18),80);setTimeout(()=>beep(659,0.1,0.18),160)}
+function sfxVictoryFanfare(){
+  const melody=[523,659,784,659,784,880,1047,1319,1047,784,1047,1319];
+  melody.forEach((n,i)=>setTimeout(()=>beep(n,0.15,0.22,'square'),i*90));
+  setTimeout(()=>{for(let i=0;i<6;i++)setTimeout(()=>beep(1047+i*100,0.08,0.15,'square'),i*60)},1200);
+}
+function sfxClick(){beep(440,0.03,0.12)}
+
+let musicTO=null;
+const MUSIC={
+  ep1:[[440,90],[494,90],[440,90],[392,110],[440,90],[494,90],[523,150],[0,70],[392,90],[440,90]],
+  ep2:[[262,110],[294,110],[330,110],[349,80],[330,80],[294,100],[262,150],[0,80],[247,100],[262,100]],
+  ep3:[[523,55],[587,55],[659,55],[698,55],[659,55],[587,55],[523,70],[0,35],[494,55],[523,55]],
+  ep4:[[349,80],[392,80],[440,80],[494,80],[440,80],[349,110],[0,55],[330,80],[392,80]],
+  ep5:[[880,45],[988,45],[1047,45],[880,45],[784,45],[880,55],[0,25],[1047,45],[988,45],[784,70]]
+};
+function startMusic(k,v=0.055){stopMusic();const n=MUSIC[k]||MUSIC.ep1;let i=0;function p(){const[f,d]=n[i%n.length];if(f>0)beep(f,d/1000*0.85,v,'square');i++;musicTO=setTimeout(p,d)}p()}
+function stopMusic(){clearTimeout(musicTO);musicTO=null}
+
+// ===================== DATA =====================
+const EP=[
+  {num:1,emoji:'🧠',title:'QCM DU CHANTIER',desc:'"3 questions sur le BTP... ou presque."',prog:'20%',music:'ep1'},
+  {num:2,emoji:'🃏',title:'MÉMO KEVIN',desc:'"Kevin se cache partout. Retrouve-le !"',prog:'40%',music:'ep2'},
+  {num:3,emoji:'☕',title:'SURVIE CAFÉINE',desc:'"3h de sommeil. Ludgero doit tenir !"',prog:'60%',music:'ep3'},
+  {num:4,emoji:'📞',title:'CLIENT EN PANIQUE',desc:'"Allô Ludgero ?! CATASTROPHE !!"',prog:'80%',music:'ep4'},
+  {num:5,emoji:'🏆',title:'LE MÉGALOT',desc:'"Un calcul. Un code. 1 000 000 € !"',prog:'100%',music:'ep5'}
+];
+
+const EP1_QS=[
+  {
+    q:'Un électricien installe une prise dans une salle de bain. Que fait-il d\'abord ?',
+    opts:['Il coupe le courant','Il met des gants en caoutchouc','Il appelle Kevin','Il teste avec son doigt mouillé'],
+    ans:0,
+    comment:'On coupe TOUJOURS le courant. Kevin fait jamais ça. 💡'
+  },
+  {
+    q:'Sur un chantier, une poutre de 8 tonnes tombe. Que faites-vous ?',
+    opts:['Vous l\'esquivez en roulé-boulé','Vous appelez les secours immédiatement','Vous faites semblant d\'être absent','Vous postez ça sur Instagram'],
+    ans:1,
+    comment:'Les secours d\'abord. Les réseaux sociaux après. 🚨'
+  },
+  {
+    q:'Un mur porteur c\'est quoi ?',
+    opts:['Un mur qui supporte la structure du bâtiment','Un mur très fort psychologiquement','Un mur qui porte les casques','Un mur qui a passé un diplôme'],
+    ans:0,
+    comment:'Structure du bâtiment. Ne jamais démolir sans vérifier ! 🧱'
+  }
+];
+
+const EP4_QS=[
+  {
+    ctx:'Allô Ludgero ?! Mon plafond s\'est effondré ! Il y a du plâtre PARTOUT !!!',
+    q:'Que faites-vous EN PREMIER ?',
+    opts:['Vérifier s\'il y a des blessés','Demander si c\'est sous garantie','Envoyer Kevin avec un balai','Proposer un devis pour refaire'],
+    ans:0,
+    comment:'Sécurité des personnes = priorité absolue 🚨'
+  },
+  {
+    ctx:'Il dit que c\'est votre faute car votre camion a vibré devant chez lui !',
+    q:'Vous répondez :',
+    opts:['"On vient constater ensemble calmement"','"Mon camion vibre pas, c\'est vous"','"Je connais un bon plâtrier"','"Kevin était là, c\'est lui"'],
+    ans:0,
+    comment:'Constater ensemble = pro et honnête ✅'
+  },
+  {
+    ctx:'Il menace de mettre une mauvaise note Google !',
+    q:'Vous répondez :',
+    opts:['"Je comprends, réglons ça vite"','"J\'ai 220 avis 5 étoiles, faites votre pire"','"Kevin gère les avis Google"','"Je pleure"'],
+    ans:0,
+    comment:'Empathie et rapidité = client reconquis 🌟'
+  }
+];
+
+// ===================== STATE =====================
+let state={ep:0,lives:3};
+let hudTimer=null,hudVal=30;
+let ep3Intv=null,ep3E=100,ep3S=0,ep3On=false,ep3Speed=2,ep3SpeedIntv=null;
+let ep1Idx=0;
+let ep4Step=0;
+let ep2Flipped=[],ep2Lock=false,ep2M=0;
+let ep5Ans=0,ep5Frozen=false,ep5TV=5,ep5Intv=null,ep5Hint=false,ep5Tries=0;
+
+// ===================== UTILS =====================
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
+function setHud(on,ep,t){const h=document.getElementById('hud');h.style.display=on?'flex':'none';if(on){document.getElementById('hud-ep').textContent='ÉP. '+ep+'/4';updateLives();updHudT(t)}}
+function updateLives(){document.getElementById('hud-lives').textContent='❤️'.repeat(state.lives)+'🖤'.repeat(Math.max(0,3-state.lives))}
+function updHudT(v){const e=document.getElementById('hud-timer');e.textContent=v;e.className='hud-timer'+(v<=5?' danger':'')}
+function startHudT(s,cb){clearInterval(hudTimer);hudVal=s;updHudT(s);hudTimer=setInterval(()=>{hudVal--;updHudT(hudVal);if(hudVal<=0){clearInterval(hudTimer);cb()}},1000)}
+function stopHudT(){clearInterval(hudTimer)}
+function flash(c='#ffffff'){const f=document.getElementById('flash');f.style.background=c;f.style.opacity='0.4';setTimeout(()=>f.style.opacity='0',150)}
+function animStars(el,n){el.innerHTML='';for(let i=0;i<n;i++){const s=document.createElement('span');s.className='star-anim';s.textContent='⭐';s.style.animationDelay=i*120+'ms';el.appendChild(s)}}
+function buildPath(done){
+  const em=['🧠','🃏','☕','📞','🏆'];let h='';
+  em.forEach((e,i)=>{let c='step-dot';if(i<=done)c+=' done';else if(i===done+1)c+=' current';else c+=' locked';h+=`<div class="${c}">${e}</div>`;if(i<4)h+=`<div style="color:${i<done?'var(--green)':'#444'};font-size:16px">→</div>`});
+  document.getElementById('win-path').innerHTML=h;
+}
+
+// ===================== FLOW =====================
+function startGame(){state={ep:0,lives:3};showEpIntro(0)}
+function showEpIntro(idx){
+  state.ep=idx;const e=EP[idx];
+  document.getElementById('ei-num').textContent='ÉPREUVE '+(idx<4?idx+1+'/4':'FINALE');
+  document.getElementById('ei-emoji').textContent=e.emoji;
+  document.getElementById('ei-title').textContent=e.title;
+  document.getElementById('ei-desc').textContent=e.desc;
+  document.getElementById('ei-prog').style.width=e.prog;
+  setHud(false);stopMusic();show('s-ep-intro');sfxEpStart();
+}
+function launchEpreuve(){sfxClick();const ep=state.ep;if(ep===0)launchEp1();else if(ep===1)launchEp2();else if(ep===2)launchEp3();else if(ep===3)launchEp4();else launchEp5()}
+function winEp(idx,msg,bonus){
+  stopHudT();stopMusic();clearInterval(ep3Intv);clearInterval(ep3SpeedIntv);clearInterval(ep5Intv);ep3On=false;
+  sfxVictoryFanfare();flash('#00ff88');
+  document.getElementById('win-emoji').textContent=EP[idx].emoji;
+  animStars(document.getElementById('win-stars'),state.lives>=3?3:state.lives>=2?2:1);
+  document.getElementById('win-msg').innerHTML=msg+'<br><span style="color:var(--orange);font-size:12px;font-weight:900">'+bonus+'</span>';
+  buildPath(idx);
+  const nb=document.getElementById('win-next-btn');nb.textContent=idx>=3?'LE MÉGALOT ▶':'SUIVANT ▶';nb.className=idx>=3?'btn':'btn green';
+  setHud(false);show('s-win-ep');
+}
+function loseEp(msg,big=false){
+  stopHudT();stopMusic();clearInterval(ep3Intv);clearInterval(ep3SpeedIntv);clearInterval(ep5Intv);ep3On=false;
+  if(big){sfxBigFail();flash('#ff0000');flash('#ff0000');setTimeout(()=>flash('#ff0000'),200)}
+  else{sfxFail();flash('#ff0000')}
+  document.getElementById('defeat-emoji').textContent=big?'💀':'😭';
+  document.getElementById('defeat-title').textContent=big?'CATASTROPHE !!!':'RATÉ !';
+  document.getElementById('lose-msg').textContent=msg;
+  setHud(false);show('s-lose');
+}
+function nextEpreuve(){sfxClick();showEpIntro(state.ep+1)}
+function retryEpreuve(){sfxClick();state.lives=3;showEpIntro(state.ep)}
+function goHome(){sfxClick();stopHudT();stopMusic();clearInterval(ep3Intv);clearInterval(ep3SpeedIntv);clearInterval(ep5Intv);ep3On=false;setHud(false);show('s-intro')}
+function victory(){setHud(false);stopMusic();show('s-victory');sfxVictoryFanfare();confetti();moneyRain();animStars(document.getElementById('victory-stars'),5)}
+
+// ===================== EP1 QCM =====================
+function launchEp1(){ep1Idx=0;setHud(true,1,35);show('s-ep1');loadEp1Q();startMusic('ep1');startHudT(35,()=>loseEp('Trop lent ! Le chantier t\'attend... 😅',false))}
+function loadEp1Q(){
+  if(ep1Idx>=EP1_QS.length){stopHudT();winEp(0,'QCM maîtrisé ! Ludgero sait tout sur le BTP 💪','3/3 BONNES RÉPONSES');return}
+  const q=EP1_QS[ep1Idx];
+  document.getElementById('ep1-q').textContent=q.q;
+  document.getElementById('ep1-prog').textContent='Question '+(ep1Idx+1)+'/3';
+  const c=document.getElementById('ep1-choices');c.innerHTML='';
+  q.opts.forEach((o,i)=>{const b=document.createElement('button');b.className='choice-btn';b.textContent=o;b.onclick=()=>ansEp1(i,b,q);c.appendChild(b)});
+}
+function ansEp1(idx,btn,q){
+  document.querySelectorAll('#ep1-choices .choice-btn').forEach(b=>b.onclick=null);
+  if(idx===q.ans){btn.classList.add('correct');sfxOK();flash('#00ff88');setTimeout(()=>{ep1Idx++;loadEp1Q()},650)}
+  else{btn.classList.add('wrong');sfxFail();state.lives--;updateLives();if(state.lives<=0){stopHudT();loseEp('0 vies ! '+q.comment,false);return}
+    const h=document.createElement('p');h.style.cssText='color:#ff9800;font-size:12px;margin-top:8px;font-weight:900';h.textContent='💡 '+q.comment;
+    document.getElementById('ep1-choices').appendChild(h);setTimeout(()=>{ep1Idx++;loadEp1Q()},1300)}
+}
+
+// ===================== EP2 MÉMO =====================
+const MEMOS=['👷','🔨','🧱','⚙️','🪚','🪜','📐','🔧'];
+function launchEp2(){ep2Flipped=[];ep2Lock=false;ep2M=0;setHud(true,2,70);show('s-ep2');buildMemo();document.getElementById('ep2-score').textContent='0 / 4 paires';document.getElementById('ep2-msg').textContent='';startMusic('ep2');startHudT(70,()=>loseEp('Temps écoulé ! Kevin squatte les WC... 🚽',false))}
+function buildMemo(){
+  const grid=document.getElementById('ep2-grid');grid.innerHTML='';
+  const ch=MEMOS.slice(0,4);const cards=[...ch,...ch];
+  for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]]}
+  cards.forEach(em=>{const c=document.createElement('div');c.className='memo-card';c.dataset.em=em;c.innerHTML=`<div class="memo-card-inner"><div class="memo-front"></div><div class="memo-back">${em}</div></div>`;c.onclick=()=>flipMemo(c);grid.appendChild(c)});
+}
+function flipMemo(card){
+  if(ep2Lock||card.classList.contains('flipped')||card.classList.contains('matched'))return;
+  sfxFlip();card.classList.add('flipped');ep2Flipped.push(card);
+  if(ep2Flipped.length===2){
+    ep2Lock=true;const[a,b]=ep2Flipped;
+    if(a.dataset.em===b.dataset.em){
+      a.classList.add('matched');b.classList.add('matched');ep2M++;ep2Flipped=[];ep2Lock=false;
+      sfxMatch();flash('#00ff88');
+      document.getElementById('ep2-score').textContent=ep2M+' / 4 paires';
+      document.getElementById('ep2-msg').textContent=['Bien joué ! 🎯','Paire trouvée ! 👷','Excellent ! 💪','PARFAIT ! 🔥'][ep2M-1]||'';
+      if(ep2M>=4){stopHudT();winEp(1,'Mémorisation de champion ! Kevin est retrouvé 🧠','4 PAIRES TROUVÉES')}
+    }else{
+      sfxFail();document.getElementById('ep2-msg').textContent='Pas pareil ! Mémorise mieux... 🧠';
+      setTimeout(()=>{a.classList.remove('flipped');b.classList.remove('flipped');ep2Flipped=[];ep2Lock=false;document.getElementById('ep2-msg').textContent=''},1000);
+    }
+  }
+}
+
+// ===================== EP3 CAFÉINE — 15s, accélération =====================
+function launchEp3(){
+  ep3E=100;ep3S=0;ep3On=true;ep3Speed=2;
+  setHud(true,3,15);show('s-ep3');
+  document.getElementById('ep3-score').textContent='0';
+  document.getElementById('ep3-bar').style.width='100%';
+  document.getElementById('ep3-area').innerHTML='';
+  document.getElementById('ep3-status').textContent='Attrape 6 cafés pour survivre !';
+  clearInterval(ep3Intv);clearInterval(ep3SpeedIntv);
+  let tick=0;
+  startMusic('ep3',0.07);
+  // Accélération progressive toutes les 3 secondes
+  ep3SpeedIntv=setInterval(()=>{ep3Speed=Math.min(ep3Speed+1,9)},4000);
+  ep3Intv=setInterval(()=>{
+    if(!ep3On)return;tick++;
+    if(tick%2===0)spawnF(true);
+    if(tick%3===0)spawnF(false);
+    ep3E=Math.max(0,ep3E-3);
+    document.getElementById('ep3-bar').style.width=ep3E+'%';
+    if(ep3E<=0){ep3On=false;clearInterval(ep3Intv);clearInterval(ep3SpeedIntv);stopHudT();loseEp('Ludgero s\'est effondré ! Il manquait de café ☕',false)}
+  },500);
+  startHudT(15,()=>{
+    ep3On=false;clearInterval(ep3Intv);clearInterval(ep3SpeedIntv);
+    if(ep3S>=6)winEp(2,'Ludgero tient debout ! '+ep3S+' cafés avalés ☕','FULL ÉNERGIE !');
+    else loseEp('Pas assez de caféine ('+ep3S+'/6). Ludgero ronfle sur le béton... 😴',false);
+  });
+}
+function spawnF(isCoffee){
+  const area=document.getElementById('ep3-area');
+  const obj=document.createElement('div');obj.className='falling-obj';obj.textContent=isCoffee?'☕':'🧾';
+  obj.style.left=Math.floor(Math.random()*82)+'%';obj.style.top='-34px';
+  obj.onclick=()=>{
+    if(!ep3On)return;
+    if(isCoffee){sfxCoffee();ep3S++;ep3E=Math.min(100,ep3E+14);document.getElementById('ep3-score').textContent=ep3S;document.getElementById('ep3-bar').style.width=ep3E+'%';flash('#ff9800')}
+    else{sfxBill();ep3E=Math.max(0,ep3E-20);document.getElementById('ep3-bar').style.width=ep3E+'%'}
+    obj.remove();
+  };
+  area.appendChild(obj);
+  let top=-34;
+  const fall=setInterval(()=>{
+    if(!ep3On){obj.remove();clearInterval(fall);return}
+    top+=ep3Speed;obj.style.top=top+'px'; // vitesse qui augmente !
+    if(top>185){obj.remove();clearInterval(fall)}
+  },30);
+}
+
+// ===================== EP4 CLIENT — 10s =====================
+function launchEp4(){ep4Step=0;setHud(true,4,60);show('s-ep4');loadEp4Q();startMusic('ep4');startHudT(60,()=>loseEp('TEMPS ÉCOULÉ ! Le client vous a raccroché au nez ! 📵💥',true))}
+function loadEp4Q(){
+  if(ep4Step>=EP4_QS.length){stopHudT();winEp(3,'Client sauvé ! Procès évité. Ludgero = diplomate 🤝','3/3 RÉPONSES PARFAITES');return}
+  const d=EP4_QS[ep4Step];
+  document.getElementById('ep4-text').textContent=d.ctx;
+  document.getElementById('ep4-q').textContent=d.q;
+  document.getElementById('ep4-prog').textContent='Question '+(ep4Step+1)+'/3';
+  const c=document.getElementById('ep4-choices');c.innerHTML='';
+  d.opts.forEach((o,i)=>{const b=document.createElement('button');b.className='choice-btn';b.textContent=o;b.onclick=()=>ansEp4(i,b,d);c.appendChild(b)});
+}
+function ansEp4(idx,btn,d){
+  document.querySelectorAll('#ep4-choices .choice-btn').forEach(b=>b.onclick=null);
+  if(idx===d.ans){btn.classList.add('correct');sfxOK();flash('#00ff88');setTimeout(()=>{ep4Step++;loadEp4Q()},600)}
+  else{btn.classList.add('wrong');sfxFail();state.lives--;updateLives();if(state.lives<=0){stopHudT();loseEp('0 vies ! '+d.comment,true);return}
+    const h=document.createElement('p');h.style.cssText='color:#ff9800;font-size:12px;margin-top:8px;font-weight:900';h.textContent='💡 '+d.comment;
+    document.getElementById('ep4-choices').appendChild(h);setTimeout(()=>{ep4Step++;loadEp4Q()},1300)}
+}
+
+// ===================== EP5 MÉGALOT — 1234+5678 =====================
+function launchEp5(){
+  ep5Ans=1234+5678; // = 6912, toujours le même, simple et mémorable
+  ep5Frozen=false;ep5TV=5;ep5Hint=false;ep5Tries=0;
+  document.getElementById('ep5-op').innerHTML='<span>1234</span><br>+ <span>5678</span>';
+  document.getElementById('ep5-input').value='';
+  document.getElementById('ep5-input').className='answer-input';
+  document.getElementById('ep5-tries').textContent='';
+  document.getElementById('ep5-timer').textContent='5';
+  document.getElementById('ep5-timer').className='ep5-timer-wrap';
+  document.getElementById('freeze-hint').className='freeze-hint';
+  document.getElementById('freeze-hint').textContent='💡 clique sur le timer...';
+  setHud(false);show('s-ep5');
+  startMusic('ep5',0.08);
+  clearInterval(ep5Intv);
+  ep5Intv=setInterval(()=>{
+    if(ep5Frozen)return;
+    ep5TV--;
+    const el=document.getElementById('ep5-timer');el.textContent=ep5TV;
+    if(ep5TV<=3){el.className='ep5-timer-wrap danger'}
+    if(ep5TV===3&&!ep5Hint){document.getElementById('freeze-hint').className='freeze-hint visible';ep5Hint=true}
+    if(ep5TV<=0){clearInterval(ep5Intv);stopMusic();el.textContent='0';document.getElementById('ep5-tries').textContent='⏰ Temps écoulé... le coffre attend encore !'}
+  },1000);
+}
+function toggleFreeze(){
+  sfxFreeze();ep5Frozen=!ep5Frozen;
+  const el=document.getElementById('ep5-timer');
+  const fh=document.getElementById('freeze-hint');
+  if(ep5Frozen){el.classList.add('frozen');el.classList.remove('danger');fh.textContent='❄️ Timer gelé — réfléchis !';fh.style.color='var(--blue)';stopMusic()}
+  else{el.className='ep5-timer-wrap'+(ep5TV<=3?' danger':'');fh.textContent='▶ Timer repris !';fh.style.color='var(--orange)';if(ep5TV>0)startMusic('ep5',0.08)}
+}
+function checkMegalot(val){
+  const inp=document.getElementById('ep5-input');
+  if(parseInt(val)===ep5Ans){
+    inp.className='answer-input correct-input';sfxVictoryFanfare();clearInterval(ep5Intv);stopMusic();
+    setTimeout(()=>victory(),700);
+  }else if(val.length>=String(ep5Ans).length){
+    ep5Tries++;inp.className='answer-input wrong-input';sfxFail();
+    document.getElementById('ep5-tries').textContent='❌ Mauvais code — essai '+ep5Tries;
+    setTimeout(()=>{inp.className='answer-input';inp.value=''},500);
+  }
+}
+
+// ===================== VICTOIRE — FÊTE =====================
+function confetti(){
+  const cols=['#FFD700','#FF6B00','#00C853','#1A6FFF','#FF1744','#fff','#ff69b4','#00ffff'];
+  for(let i=0;i<90;i++){
+    setTimeout(()=>{
+      const c=document.createElement('div');c.className='confetti-piece';
+      c.style.cssText=`left:${Math.random()*100}vw;top:0;background:${cols[i%cols.length]};transform:rotate(${Math.random()*360}deg);width:${6+Math.random()*12}px;height:${6+Math.random()*12}px;animation-duration:${2+Math.random()*2.5}s;animation-delay:${Math.random()*0.8}s`;
+      document.body.appendChild(c);setTimeout(()=>c.remove(),5500);
+    },i*35);
+  }
+}
+function moneyRain(){
+  for(let i=0;i<40;i++){
+    setTimeout(()=>{
+      const m=document.createElement('div');m.className='money-piece';m.textContent=['💸','💰','🤑','💵'][i%4];
+      m.style.cssText=`left:${Math.random()*100}vw;top:0;animation-duration:${2.5+Math.random()*2}s;animation-delay:${Math.random()*1.5}s;font-size:${20+Math.random()*20}px`;
+      document.body.appendChild(m);setTimeout(()=>m.remove(),6000);
+    },i*80);
+  }
+}
+</script>
+</body>
+</html>
